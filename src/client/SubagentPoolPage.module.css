@@ -1,0 +1,170 @@
+/* 「子代理」settings page — official Setting-Cell convention (figma
+ * 'Setting-Cell': gap 8, pad 16/0, hairline separator) and selector pill
+ * (figma 'Selector': h36 r18, fill bg-module-platform, pad 0/14, gap 12).
+ * All colors are --dsw-* alias tokens; no hard-coded values. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 16px;
+  max-width: 680px;
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 48px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.desc {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* Menu wraps the anchor in its own root span, which is the real flex child
+ * of the picker row — it fills the row, and the pill fills it. */
+.selectorWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+/* Non-portal mode: the dropdown renders inside the anchor span, so the
+ * opened list can be made to exactly match the pill's width. */
+.selectorWrap :global([role='menu']) {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+/* Selector pill (figma 'Selector': h36 r18, pad 0/14, gap 12). */
+.selector {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-module-platform);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.selector:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.selector:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.selectorText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.chevron {
+  flex: none;
+}
+
+.nameInput {
+  width: 240px;
+}
+
+/* Multi-line description, aligned with the primitives Input tokens. */
+.textarea {
+  flex: 0 1 280px;
+  min-height: 64px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.textarea::placeholder {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.empty {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  padding: 16px 0;
+}
+
+.error {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 13px;
+  line-height: 20px;
+  padding: 16px 0;
+}
+
+.hint {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  padding-top: 12px;
+}
+
+.danger {
+  color: var(--dsw-alias-state-error-primary);
+}

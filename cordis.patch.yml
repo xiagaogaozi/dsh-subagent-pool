@@ -1,0 +1,8 @@
+# dsh-subagent-pool bundle patch: mounts the subagent-pool plugin into the
+# host composition of a dsh profile. The plugin registers the `subagent_run`
+# tool, one usage section, the member-profile HTTP route, and the settings
+# page (client half) for maintaining the named-subagent library.
+- insert:
+    - id: subagent-pool
+      name: '@xiagaogaozi/dsh-subagent-pool'
+      config: {}
