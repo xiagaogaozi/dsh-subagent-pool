@@ -1,7 +1,8 @@
 /**
- * The `subagent_run` model-facing tool: run one named subagent from the
- * library on a one-shot delegation, applying its model override, reasoning
- * effort, and agent preset, and return the child's final output.
+ * Model-facing tools for dsh-subagent-pool: `subagent_run` executes a named
+ * subagent from the library on a one-shot delegation (model override,
+ * reasoning effort, and agent preset applied), and `subagent_define` lets the
+ * caller create or update a named subagent itself — no settings page needed.
  * @module dsh-subagent-pool/tools
  */
 
@@ -17,6 +18,9 @@ import type { SubagentProfile } from './profiles.ts'
 
 /** Synchronous reader of the subagent-profile library. */
 export type ProfileLoader = () => SubagentProfile[]
+
+/** Persist the whole profile list (upsert target for `subagent_define`). */
+export type ProfileSaver = (profiles: SubagentProfile[]) => Promise<void>
 
 /**
  * Extract the plain-text of a child's final output.
@@ -94,8 +98,43 @@ async function applyProfile(
   }
 }
 
-/** Register the `subagent_run` tool into the shared tools registry. */
-export function registerSubagentRunTool(ctx: Context, loadProfiles: ProfileLoader): void {
+/** Register the `subagent_run` and `subagent_define` tools. */
+export function registerSubagentRunTool(
+  ctx: Context,
+  loadProfiles: ProfileLoader,
+  saveProfiles: ProfileSaver,
+): void {
+  ctx.tools.register(defineTool({
+    name: 'subagent_define',
+    description: 'Create or update a named subagent in the 子代理 settings page (upsert by name). Use it when the task needs a reusable subagent that is not configured yet — define it (name/description/model/reasoning/preset), then call subagent_run(name="<名字>", task="……"). Explicit fields replace the previous ones; omitted fields are cleared.',
+    parameters: {
+      name: { type: 'string', required: true, description: 'Unique subagent name.' },
+      description: { type: 'string', description: 'When to use this subagent — shown to the caller in the prompt directory.' },
+      model: { type: 'string', description: 'Model route "provider/model", empty = inherit the caller\'s model.' },
+      reasoning_effort: { type: 'string', description: 'Reasoning effort "off" | "high" | "max", empty = model default.' },
+      preset: { type: 'string', description: 'Agent preset id to mount on the subagent, empty = inherit the caller\'s preset.' },
+    },
+    output: {
+      schema: { type: 'string' },
+      render: (args, value) => [{ type: 'text', text: String(value) }],
+    },
+    async execute(args) {
+      const name = args.name.trim()
+      if (name === '') throw new Error('subagent name must not be empty')
+      const next = [
+        ...loadProfiles().filter((profile) => profile.name !== name),
+        {
+          name,
+          description: args.description ?? '',
+          model: args.model ?? '',
+          reasoningEffort: args.reasoning_effort ?? '',
+          preset: args.preset ?? '',
+        },
+      ]
+      await saveProfiles(next)
+      return `subagent "${name}" saved (${next.length} total in the library)`
+    },
+  }))
   ctx.tools.register(defineTool({
     name: 'subagent_run',
     description: 'Run one named subagent from the 子代理 settings page on a one-shot task. The profile decides the model, reasoning effort, and agent preset; the subagent works on the task and returns its final output. Use it when the task fits a configured subagent (see the subagent directory in the system prompt).',

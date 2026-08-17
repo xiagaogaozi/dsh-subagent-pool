@@ -97,7 +97,9 @@ export function apply(ctx: Context, config: Config): void {
     text: `${usageSectionText()}\n{{subagent_pool}}`,
   })
 
-  registerSubagentRunTool(ctx, loadProfiles)
+  registerSubagentRunTool(ctx, loadProfiles, async (profiles) => {
+    await profileScope.replace({ profiles })
+  })
 
   // The settings-page route needs the Web server, which webless profiles do
   // not mount; register lazily, then on each service binding event.
