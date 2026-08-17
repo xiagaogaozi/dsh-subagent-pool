@@ -1,7 +1,7 @@
 {
-  "name": "dsh-subagent-pool",
-  "version": "0.1.1",
-  "description": "DSH named-subagent pool: maintain a library of reusable subagents (model, reasoning effort, agent preset) on a settings page and call them by name with subagent_run",
+  "name": "dsh-子代理池",
+  "version": "0.2.0",
+  "description": "DSH named-subagent pool: 可独立配置子代理的预设、模型、推理等级，且主代理可通过描述的内容知晓什么时候调用此子代理",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
