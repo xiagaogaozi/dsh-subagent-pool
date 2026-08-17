@@ -5,8 +5,6 @@ DeepSeek Harness 的**命名子代理池**插件：在设置页「子代理」�
 <img width="863" height="870" alt="image" src="https://github.com/user-attachments/assets/781e3000-ad8c-44ee-9abc-da7885b1a398" />
 
 
-与 AgentTeams（团队模式）互补：子代理是**能力库**（导演-演员制的主线），团队是**协作组织**（任务/邮箱/成员直连）。
-
 ## 安装
 
 ```sh
