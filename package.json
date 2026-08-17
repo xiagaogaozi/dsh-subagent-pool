@@ -1,6 +1,6 @@
 {
   "name": "@xiagaogaozi/dsh-subagent-pool",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH named-subagent pool: maintain a library of reusable subagents (model, reasoning effort, agent preset) on a settings page and call them by name with subagent_run",
   "type": "module",
   "main": "lib/index.js",
@@ -65,7 +65,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && tsdown",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {},
   "peerDependencies": {

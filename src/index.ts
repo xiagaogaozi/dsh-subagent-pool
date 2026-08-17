@@ -90,11 +90,11 @@ export function apply(ctx: Context, config: Config): void {
     return Array.isArray(value?.profiles) ? value.profiles! : []
   }
 
-  ctx.systemPrompt.variable('subagentPool', () => renderProfileDirectory(loadProfiles()))
+  ctx.systemPrompt.variable('subagent_pool', () => renderProfileDirectory(loadProfiles()))
   ctx.systemPrompt.section({
     name: 'subagent-pool:usage',
     order: config.promptSectionOrder ?? 118,
-    text: `${usageSectionText()}\n{{subagentPool}}`,
+    text: `${usageSectionText()}\n{{subagent_pool}}`,
   })
 
   registerSubagentRunTool(ctx, loadProfiles)

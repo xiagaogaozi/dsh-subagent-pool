@@ -5,7 +5,7 @@
  * 「子代理」: a name, a description telling the caller when to use it, a model,
  * a reasoning effort, and an agent preset. The library is persisted through
  * the host `settings` service, surfaced to the caller through a
- * `{{subagentPool}}` prompt variable, and executed by `subagent_run(name, task)`.
+ * `{{subagent_pool}}` prompt variable, and executed by `subagent_run(name, task)`.
  * @module dsh-subagent-pool/profiles
  */
 

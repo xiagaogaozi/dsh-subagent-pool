@@ -15,7 +15,7 @@ dsh plugin --profile web add "file:local-plugins/<path>/<tarball>.tgz"
 ## 使用
 
 1. 设置 → **子代理** → 添加（名字/描述/模型/推理等级/预设）→ 保存
-2. 主代理的系统提示里会出现子代理目录（`{{subagentPool}}` 变量）
+2. 主代理的系统提示里会出现子代理目录（`{{subagent_pool}}` 变量）
 3. 需要时调用：`subagent_run(name="林晚", task="……")`
 
 ## 配置项语义
