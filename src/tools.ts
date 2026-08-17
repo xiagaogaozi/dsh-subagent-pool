@@ -31,6 +31,16 @@ function outputText(output: Array<{ type: string; text?: string }>): string {
 }
 
 /**
+ * Split a `provider/model` spec into its route parts. A bare model id keeps
+ * the parent's provider; an explicit provider must not depend on the parent.
+ */
+function splitModel(spec: string): { provider?: string; model: string } {
+  const slash = spec.indexOf('/')
+  if (slash > 0) return { provider: spec.slice(0, slash), model: spec.slice(slash + 1) }
+  return { model: spec }
+}
+
+/**
  * Mount the profile's agent preset on the child and wire the reasoning-effort
  * waterfall, mirroring the harness's own selection mechanism.
  * @param child - the live in-process child.
@@ -77,7 +87,7 @@ export function registerSubagentRunTool(ctx: Context, loadProfiles: ProfileLoade
         prompt: [{ type: 'text', text: args.task }],
         parent: exec.agent,
         signal: exec.signal,
-        ...profile.model !== '' ? { agentOptions: { model: profile.model } } : {},
+        ...profile.model !== '' ? { agentOptions: splitModel(profile.model) } : {},
       })
       // Apply preset + reasoning effort while the child is live. A one-shot
       // child starts its turn asynchronously after publication, so these
