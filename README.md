@@ -2,6 +2,9 @@
 
 DeepSeek Harness 的**命名子代理池**插件：在设置页「子代理」维护一批可复用的子代理（每个 = 名字 + 描述 + 模型 + 推理等级 + 预设），主代理在对话中按描述判断"什么时候用谁"，用 `subagent_run(name, task)` 按名字调用——模型/推理等级/预设自动套用，调用即干活返回结果。
 
+<img width="863" height="870" alt="image" src="https://github.com/user-attachments/assets/781e3000-ad8c-44ee-9abc-da7885b1a398" />
+
+
 与 AgentTeams（团队模式）互补：子代理是**能力库**（导演-演员制的主线），团队是**协作组织**（任务/邮箱/成员直连）。
 
 ## 安装
