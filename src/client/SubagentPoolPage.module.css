@@ -4,6 +4,8 @@
  * All colors are --dsw-* alias tokens; no hard-coded values. */
 
 .wrap {
+  --subagent-pool-settings-field-width: 280px;
+
   display: flex;
   flex-direction: column;
   padding: 0 16px 16px;
@@ -65,6 +67,13 @@
   display: flex;
 }
 
+/* Form selectors align with the description field. The library picker
+ * remains full-row through the base selectorWrap rule above. */
+.row .selectorWrap {
+  flex: 0 1 var(--subagent-pool-settings-field-width);
+  width: var(--subagent-pool-settings-field-width);
+}
+
 /* Non-portal mode: the dropdown renders inside the anchor span, so the
  * opened list can be made to exactly match the pill's width. */
 .selectorWrap :global([role='menu']) {
@@ -116,12 +125,14 @@
 }
 
 .nameInput {
-  width: 240px;
+  flex: 0 1 var(--subagent-pool-settings-field-width);
+  width: var(--subagent-pool-settings-field-width);
 }
 
 /* Multi-line description, aligned with the primitives Input tokens. */
 .textarea {
-  flex: 0 1 280px;
+  flex: 0 1 var(--subagent-pool-settings-field-width);
+  width: var(--subagent-pool-settings-field-width);
   min-height: 64px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
