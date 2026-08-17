@@ -4,5 +4,5 @@
 # page (client half) for maintaining the named-subagent library.
 - insert:
     - id: subagent-pool
-      name: '@xiagaogaozi/dsh-subagent-pool'
+      name: 'dsh-subagent-pool'
       config: {}
