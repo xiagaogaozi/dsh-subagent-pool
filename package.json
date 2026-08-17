@@ -1,6 +1,6 @@
 {
   "name": "@xiagaogaozi/dsh-subagent-pool",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DSH named-subagent pool: maintain a library of reusable subagents (model, reasoning effort, agent preset) on a settings page and call them by name with subagent_run",
   "type": "module",
   "main": "lib/index.js",

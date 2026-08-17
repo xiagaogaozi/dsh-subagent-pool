@@ -23,5 +23,15 @@ for (const file of files) {
   }
 }
 
+const clientSource = readFileSync('src/client/SubagentPoolPage.tsx', 'utf8')
+if (!/\buseEffect\b/.test(clientSource)) {
+  console.error('src/client/SubagentPoolPage.tsx: missing useEffect import for initial profile loading')
+  failures++
+}
+if (!/useEffect\(\(\) => \{\s*void load\(\)\s*\}, \[\]\)/s.test(clientSource)) {
+  console.error('src/client/SubagentPoolPage.tsx: missing initial load() effect')
+  failures++
+}
+
 if (failures > 0) process.exit(1)
-console.log('system-prompt variable contract: PASS')
+console.log('plugin contracts: PASS')

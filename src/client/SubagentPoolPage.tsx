@@ -10,7 +10,7 @@
  * @module dsh-subagent-pool/client/SubagentPoolPage
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Button,
   Input,
@@ -128,6 +128,13 @@ export function SubagentPoolPage(): JSX.Element {
       setError(`无法加载子代理配置：${err instanceof Error ? err.message : String(err)}（插件 host 可能未更新，请重启 dsh 后重试）`)
     }
   }
+
+  // Fetch the host snapshot once when the settings section first mounts.
+  // Without this effect `snap` remains null and the page stays on its loader.
+  useEffect(() => {
+    void load()
+  }, [])
+
   const save = async (profiles: Profile[]): Promise<void> => {
     setBusy(true)
     try {
