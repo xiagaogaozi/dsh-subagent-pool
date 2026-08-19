@@ -63,7 +63,7 @@ function profilesFrom(value: unknown): SubagentProfile[] | undefined {
 }
 
 export const name = 'subagent-pool'
-export const inject = ['tools', 'subagents', 'systemPrompt', 'settings', 'agentPresets']
+export const inject = ['tools', 'subagents', 'agents', 'systemPrompt', 'settings', 'agentPresets']
 
 /** Plugin configuration. */
 export interface Config {

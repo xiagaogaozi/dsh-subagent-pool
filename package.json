@@ -1,6 +1,6 @@
 {
   "name": "dsh-subagent-pool",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DSH named-subagent pool: 可独立配置子代理的预设、模型、推理等级，且主代理可通过描述的内容知晓什么时候调用此子代理",
   "type": "module",
   "main": "lib/index.js",
