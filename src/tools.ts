@@ -6,10 +6,25 @@
  * @module dsh-subagent-pool/tools
  */
 
+import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent, AgentHandle, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
+import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, ReasoningEffortId, type ContentBlock } from '@deepseek-ai/dsh-llm'
+import { SessionId } from '@deepseek-ai/dsh-session'
+import {
+  appendDelegatedPolicyOverrides,
+  captureDelegatedPolicyOverrides,
+  childSessionMeta,
+  finalAssistantOutput,
+  resolveChildAgentOptions,
+  resolveChildDepth,
+  type SubagentResult,
+  type SubagentStopReason,
+} from '@deepseek-ai/dsh-subagent'
+// Declaration merge only: makes ctx.agents visible.
+import type {} from '@deepseek-ai/dsh-agent'
 // Declaration merge only: makes ctx.subagents visible.
 import type {} from '@deepseek-ai/dsh-subagent'
 // Declaration merge only: makes ctx.agentPresets visible.
@@ -72,29 +87,158 @@ async function supportsEffort(
 }
 
 /**
- * Mount the profile's agent preset on the child and wire the reasoning-effort
- * waterfall, mirroring the harness's own selection mechanism.
- * @param child - the live in-process child.
- * @param profile - the resolved profile.
- * @param parentRoute - the caller's provider/model route (inheritance base).
+ * Map one session turn outcome to the subagent seam's terminal vocabulary,
+ * mirroring the harness's in-process driver.
  */
-async function applyProfile(
-  ctx: Context,
-  child: Agent,
-  profile: SubagentProfile,
-  parentRoute: { provider?: string; model?: string },
-): Promise<void> {
-  if (profile.preset !== '') {
-    await ctx.agentPresets.recompose(child.ctx, profile.preset)
-    // Durable commit point: the session event persists the preset so a
-    // resumed/restored child remounts THIS preset, not the inherited one.
-    child.session.append('agent-preset/selected', { agentPreset: profile.preset })
+function toStopReason(reason: { kind?: string } | undefined, cancelled: boolean): SubagentStopReason {
+  switch (reason?.kind) {
+    case 'completed':
+      return 'completed'
+    case 'max-tokens':
+      return 'max-tokens'
+    case 'aborted':
+      return cancelled ? 'aborted' : 'aborted'
+    case 'blocked':
+      return 'refusal'
+    case 'error':
+    case 'interrupted':
+    default:
+      return 'error'
   }
-  if (profile.reasoningEffort !== '' && await supportsEffort(ctx, profile, parentRoute)) {
-    child.ctx.on('agent/request', async (_payload, next) => {
-      const resolved = await next()
-      return { ...resolved, reasoningEffort: ReasoningEffortId(profile.reasoningEffort) }
-    })
+}
+
+/**
+ * Wire the reasoning-effort waterfall on the child, mirroring the harness's
+ * own selection mechanism. Applied inside the creation setup so it is live
+ * from the child's very first request.
+ */
+function wireReasoningEffort(
+  childCtx: Context,
+  effort: string,
+): void {
+  childCtx.on('agent/request', async (_payload, next) => {
+    const resolved = await next()
+    return { ...resolved, reasoningEffort: ReasoningEffortId(effort) }
+  })
+}
+
+/**
+ * Establish one one-shot child whose agent preset is mounted BEFORE its first
+ * prompt is assembled. This is the fix for the old flow, which delegated to
+ * `ctx.subagents.start('spawn')` and then called `agentPresets.recompose()`
+ * after publication — the child's first turn was already in flight by then, so
+ * the preset's persona/tools never reached the first (and only) prompt.
+ *
+ * The agent factory's `setup` callback runs while the child is still
+ * unpublished ("setup composes, it never drives"), which is exactly the
+ * window `agentPresets.mount()` requires. Everything else mirrors the
+ * harness's in-process spawn driver: policy inheritance, lineage/depth
+ * stamping, one followup, quiescent disposal, and the canonical output rule.
+ *
+ * @param ctx - the plugin context (host plane).
+ * @param profile - the resolved subagent profile.
+ * @param parent - the exact live calling agent.
+ * @param task - the self-contained task text.
+ * @param signal - caller cancellation, forwarded to creation and turn work.
+ * @returns the joined final output text.
+ */
+async function runWithPreset(
+  ctx: Context,
+  profile: SubagentProfile,
+  parent: Agent,
+  task: string,
+  signal: AbortSignal,
+): Promise<string> {
+  const childDepth = resolveChildDepth(parent, 3)
+  const meta = childSessionMeta(parent, childDepth, 0)
+  const agentOptions = resolveChildAgentOptions(
+    parent,
+    profile.model !== '' ? splitModel(profile.model) : undefined,
+    childDepth,
+  )
+  const delegated = captureDelegatedPolicyOverrides(parent)
+  const presetId = profile.preset
+  const effort = profile.reasoningEffort
+  const shouldWireEffort = effort !== '' && await supportsEffort(ctx, profile, parent.options)
+
+  const createOptions: CreateAgentOptions = {
+    sessionId: SessionId(randomUUID()),
+    meta,
+    agentOptions,
+    signal,
+    setup: async (childCtx) => {
+      // Policy inheritance: the child acts only within the sandbox scope fixed
+      // at delegation, and its approval asks are rejected deterministically.
+      appendDelegatedPolicyOverrides(childCtx.agent!.session, delegated)
+      if (presetId !== '') {
+        // Mount the target preset inside the unpublished creation window. The
+        // factory awaits setup before publication, so by the time the child is
+        // visible its persona/tools/skills are already the preset's.
+        await ctx.agentPresets.mount(childCtx, presetId)
+      }
+      if (shouldWireEffort) wireReasoningEffort(childCtx, effort)
+    },
+  }
+
+  const handle: AgentHandle = await ctx.agents.create(createOptions)
+  const child = handle.agent
+  const boundary = child.session.events.length
+  let cancelled = false
+  const onAbort = (): void => {
+    cancelled = true
+    child.cancel({ kind: 'parent' })
+  }
+  signal.addEventListener('abort', onAbort, { once: true })
+  try {
+    child.followup(createUserMessage({ content: [{ type: 'text', text: task }], source: { kind: 'user' } }))
+    await child.whenIdle()
+  } finally {
+    signal.removeEventListener('abort', onAbort)
+  }
+  try {
+    const own = child.session.events.slice(boundary)
+    const lastEnd = foldConsumedWork(own).end
+    const output = finalAssistantOutput(own) ?? []
+    const stopReason = toStopReason(lastEnd?.data.reason, cancelled)
+    const result: SubagentResult = { output, stopReason }
+    const text = outputText(result.output)
+    if (result.stopReason !== 'completed') {
+      return `[subagent "${profile.name}" ended with ${result.stopReason}]\n${text}`
+    }
+    return text
+  } finally {
+    await handle.dispose()
+  }
+}
+
+/**
+ * Fallback path for profiles without an agent preset: delegate to the harness
+ * `ctx.subagents.start('spawn')` exactly as before. Preserving this keeps the
+ * no-preset behavior bit-for-bit identical to the previous release.
+ */
+async function runInherited(
+  ctx: Context,
+  profile: SubagentProfile,
+  parent: Agent,
+  task: string,
+  signal: AbortSignal,
+): Promise<string> {
+  const run = await ctx.subagents.start('spawn', {
+    label: `subagent-pool:${profile.name}`,
+    prompt: [{ type: 'text', text: task }],
+    parent,
+    signal,
+    ...profile.model !== '' ? { agentOptions: splitModel(profile.model) } : {},
+  })
+  try {
+    const result = await run.result
+    const text = outputText(result.output)
+    if (result.stopReason !== 'completed') {
+      return `[subagent "${profile.name}" ended with ${result.stopReason}]\n${text}`
+    }
+    return text
+  } finally {
+    await run.dispose()
   }
 }
 
@@ -169,30 +313,14 @@ export function registerSubagentRunTool(
       if (profile === undefined) {
         throw new Error(`subagent "${args.name}" not found in the 子代理 settings page`)
       }
-      const run = await ctx.subagents.start('spawn', {
-        label: `subagent-pool:${profile.name}`,
-        prompt: [{ type: 'text', text: args.task }],
-        parent: exec.agent,
-        signal: exec.signal,
-        ...profile.model !== '' ? { agentOptions: splitModel(profile.model) } : {},
-      })
-      // Apply preset + reasoning effort while the child is live. A one-shot
-      // child starts its turn asynchronously after publication, so these
-      // synchronous rebinds normally land before its first model request.
-      const child = run.localAgent
-      if (child !== undefined) {
-        await applyProfile(ctx, child, profile, exec.agent.options)
+      // A profile with an agent preset must have that preset mounted inside the
+      // child's unpublished creation window; the old post-publication recompose
+      // raced the child's first turn and never applied. A profile without a
+      // preset keeps the original harness spawn path untouched.
+      if (profile.preset !== '') {
+        return await runWithPreset(ctx, profile, exec.agent, args.task, exec.signal)
       }
-      try {
-        const result = await run.result
-        const text = outputText(result.output)
-        if (result.stopReason !== 'completed') {
-          return `[subagent "${args.name}" ended with ${result.stopReason}]\n${text}`
-        }
-        return text
-      } finally {
-        await run.dispose()
-      }
+      return await runInherited(ctx, profile, exec.agent, args.task, exec.signal)
     },
   }))
 }
